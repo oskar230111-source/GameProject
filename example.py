@@ -1,101 +1,124 @@
 import pygame
 import sys
+import random
 
 pygame.init()
 
-WIDTH = 640
-HEIGHT = 640
-
-# Create display FIRST
+WIDTH, HEIGHT = 640, 640
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("PYgame")
 
-# NOW it's safe to convert
 potato_img = pygame.image.load("potato.png").convert()
+potato_img.set_colorkey((0, 0, 0))
 
-x = WIDTH/2
-y = HEIGHT/2
-ex = 640
-ey = 640
-fullscreen = False
+x, y = WIDTH // 2, HEIGHT // 2
 clock = pygame.time.Clock()
 
-nspeed = 1
 Speed = 1
+nspeed = 1
 GS = 90
 running = True
+
+health = 100
 speed_timer = 0
 cat_timer = 0
-health = 100
-cat = True
+
+enemies = []
+MAX_ENEMIES = 20
+
+# Cat variables
+cat_active = False
+ex, ey = 0, 0
 
 while running:
-
-    keys = pygame.key.get_pressed()
     current_time = pygame.time.get_ticks()
+    keys = pygame.key.get_pressed()
 
-    if ey == y:
-        pass
-    elif ey - y > 0:
-        ey -= 0.5
-    elif ey - y < 0:
-        ey += 0.5
+    # --- SPAWN CAT (1 in 1000 chance) ---
+    if len(enemies) < MAX_ENEMIES and random.randint(1, 1000) == 1:
+        print("yo")
+        side = random.choice(["top", "bottom", "left", "right"])
 
-    if ex == x:
-        pass
-    elif ex - x > 0:
-        ex -= 0.5
-    elif ex - x < 0:
-        ex += 0.5
+        if side == "top":
+            ex, ey = random.randint(0, WIDTH), 0
+        elif side == "bottom":
+            ex, ey = random.randint(0, WIDTH), HEIGHT
+        elif side == "left":
+            ex, ey = 0, random.randint(0, HEIGHT)
+        else:
+            ex, ey = WIDTH, random.randint(0, HEIGHT)
 
-    if ex == x and ey == y:
-        if cat:
+        enemies.append([ex, ey])
+    # --- MOVE CAT TOWARD PLAYER ---
+    for enemy in enemies:
+        ex, ey = enemy
+
+        # Move toward player
+        if ex < x:
+            ex += 0.5
+        elif ex > x:
+            ex -= 0.5
+
+        if ey < y:
+            ey += 0.5
+        elif ey > y:
+            ey -= 0.5
+
+        # SAVE BACK (this is what you were missing)
+        enemy[0] = ex
+        enemy[1] = ey
+
+        # Draw AFTER updating
+        screen.blit(potato_img, (ex, ey))
+
+        # Collision
+        if abs(ex - x) < 5 and abs(ey - y) < 5:
             health -= 20
-            cat = False
-            print(health)
-            cat_timer = current_time + 3000 
-            if health == 0:
+            print("Health:", health)
+
+            enemies.remove(enemy)
+
+            if health <= 0:
                 running = False
-    # Move first
+
+    # --- PLAYER MOVEMENT ---
     if keys[pygame.K_w] or keys[pygame.K_UP]:
         y -= Speed
-
     if keys[pygame.K_s] or keys[pygame.K_DOWN]:
         y += Speed
-
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-      x += Speed
-
+        x += Speed
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-      x -= Speed
+        x -= Speed
 
     x = max(0, min(x, WIDTH - potato_img.get_width()))
     y = max(0, min(y, HEIGHT - potato_img.get_height()))
-    
+
+    # --- EVENTS ---
     for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-                running = False
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    Speed = 5
-                    speed_timer = current_time + 3000 
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                Speed = 3
+                speed_timer = current_time + 3000
 
-    if speed_timer != 0 and current_time >= speed_timer:
+    # --- TIMERS ---
+    if speed_timer and current_time >= speed_timer:
         Speed = nspeed
-        speed_timer = 0 
-    
-    if cat_timer != 0 and current_time >= cat_timer:
-        cat = True
-        cat_timer = 0
+        speed_timer = 0
 
+    # --- DRAW ---
     screen.fill((30, 30, 30))
 
+    # player
     screen.blit(potato_img, (x, y))
-    screen.blit(potato_img, (ex, ey))
+
+    # enemies
+    for ex, ey in enemies:
+        screen.blit(potato_img, (ex, ey))
 
     pygame.display.flip()
     clock.tick(GS)
-                   
